@@ -10,7 +10,8 @@ class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
-    hashed_password: str
+    hashed_password: str = ""
+    vk_id: str | None = None
 
 class UserInDB(User):
     pass

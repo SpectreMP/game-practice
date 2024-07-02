@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status  
 import os
 from dotenv import load_dotenv
-  
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")  
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")  
   
@@ -24,6 +24,8 @@ def authenticate_user(fake_db, username: str, password: str):
     user = get_user(fake_db, username)  
     if not user:  
         return False  
+    if user.vk_id:  # Если пользователь аутентифицирован через VK
+        return user
     if not pwd_context.verify(password, user.hashed_password):  
         return False  
     return user  
