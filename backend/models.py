@@ -23,3 +23,16 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: str | None = None
     role: str | None = None
+    
+class FolderInfo(BaseModel):
+    name: str
+    path: str
+
+class FileInfo(BaseModel):
+    name: str
+    path: str
+    size: int
+
+class FolderContents(BaseModel):
+    folders: list[FolderInfo]
+    files: list[FileInfo]

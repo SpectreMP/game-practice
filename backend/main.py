@@ -1,27 +1,49 @@
 from datetime import timedelta  
 from typing import Annotated, List
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, status, Form, Request
+from fastapi import Depends, FastAPI, HTTPException, status, Form, Request, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm  
 from auth import (
     create_token, authenticate_user, RoleChecker, get_current_active_user, 
     validate_refresh_token, get_password_hash
 )
 from data import fake_users_db, refresh_tokens  
-from models import User, Token, UserCreate, UserInDB
+from models import User, Token, UserCreate, UserInDB, FolderInfo, FileInfo, FolderContents
 import os
 from dotenv import load_dotenv
+import shutil
+from pathlib import Path
+
 
 load_dotenv()
 
 # app = FastAPI(root_path="/api/")  
 app = FastAPI()  
-  
+
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES'))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv('REFRESH_TOKEN_EXPIRE_MINUTES')) 
 VK_CLIENT_ID = os.getenv('VK_CLIENT_ID')
 VK_CLIENT_SECRET = os.getenv('VK_CLIENT_SECRET')
 VK_REDIRECT_URI = os.getenv('VK_REDIRECT_URI')
+BASE_FOLDER_DIR = Path(os.getenv('BASE_FOLDER_DIR'))
+
+def create_folder(path: str):
+    os.makedirs(path, exist_ok=True)
+
+def delete_folder(path: str):
+    shutil.rmtree(path)
+
+def get_folder_contents(path: str) -> FolderContents:
+    folders = []
+    files = []
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        if os.path.isdir(item_path):
+            folders.append(FolderInfo(name=item, path=item_path))
+        else:
+            files.append(FileInfo(name=item, path=item_path, size=os.path.getsize(item_path)))
+    return FolderContents(folders=folders, files=files)
+
 
 @app.get("/hello")  
 def hello_func():  
@@ -125,3 +147,85 @@ async def vk_callback(code: str, request: Request):
         refresh_tokens.append(refresh_token)
         
         return Token(access_token=access_token, refresh_token=refresh_token)
+    
+@app.post("/folders/create")
+async def create_folder_endpoint(
+    folder_name: str,
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    folder_path = BASE_FOLDER_DIR / current_user.username / folder_name
+    create_folder(folder_path)
+    return {"message": f"Folder '{folder_name}' created successfully"}
+
+@app.delete("/folders/{folder_name}")
+async def delete_folder_endpoint(
+    folder_name: str,
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    folder_path = BASE_FOLDER_DIR / current_user.username / folder_name
+    if not folder_path.exists():
+        raise HTTPException(status_code=404, detail="Folder not found")
+    delete_folder(folder_path)
+    return {"message": f"Folder '{folder_name}' deleted successfully"}
+
+@app.get("/folders", response_model=FolderContents)
+async def list_folders(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    user_folder = BASE_FOLDER_DIR / current_user.username
+    create_folder(user_folder) 
+    return get_folder_contents(user_folder)
+
+@app.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    folder: str = Form(""),
+    current_user: User = Depends(get_current_active_user)
+):
+    user_folder = BASE_FOLDER_DIR / current_user.username
+    create_folder(user_folder)
+    
+    if folder:
+        upload_folder = user_folder / folder
+        create_folder(upload_folder)
+    else:
+        upload_folder = user_folder
+    
+    file_path = upload_folder / file.filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    return {"message": f"File '{file.filename}' uploaded successfully"}
+
+@app.delete("/files/{folder_name}/{file_name}")
+async def delete_file(
+    folder_name: str,
+    file_name: str,
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    file_path = BASE_FOLDER_DIR / folder_name / file_name
+    # print(f"Attempting to delete file at path: {file_path}") 
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    file_path.unlink()
+    return {"message": f"File '{file_name}' deleted successfully"}
+
+@app.put("/folders/{old_folder_name}")
+async def edit_folder(
+    old_folder_name: str,
+    new_folder_name: str,
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    old_folder_path = BASE_FOLDER_DIR / current_user.username / old_folder_name
+    new_folder_path = BASE_FOLDER_DIR / current_user.username / new_folder_name
+    
+    if not old_folder_path.exists():
+        raise HTTPException(status_code=404, detail="Old folder not found")
+    
+    if new_folder_path.exists():
+        raise HTTPException(status_code=400, detail="New folder name already exists")
+    
+    old_folder_path.rename(new_folder_path)
+    
+    return {"message": f"Folder '{old_folder_name}' renamed to '{new_folder_name}' successfully"}
