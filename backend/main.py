@@ -38,9 +38,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-app = FastAPI(lifespan=lifespan)
-    
 @app.get("/hello")
 def hello_func():
     return "Hello World"
