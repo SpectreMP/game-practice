@@ -10,12 +10,23 @@ from crud import (
     delete_refresh_token, update_user_vk_id
 )
 from database import get_db
-from file_operations import create_folder, delete_folder, get_folder_contents, upload_file, delete_file, rename_folder
+from file_operations import create_folder, delete_folder, get_folder_contents, upload_file, delete_file, rename_folder, download_file
 from models import User
 from schemas import Token, UserCreate, UserOut, FolderContents
 from vk_auth import vk_login, vk_callback
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 app = FastAPI()
+
+origins = ["http://localhost:3000",]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/hello")
 def hello_func():
@@ -118,3 +129,10 @@ async def edit_folder_endpoint(
     current_user: User = Depends(get_current_active_user)
 ):
     return rename_folder(current_user.username, old_folder_name, new_folder_name)
+
+@app.get("/folders/{folder_name}/{file_name}/download", response_class=FileResponse)
+async def download_file_endpoint(
+    folder_name: str,
+    file_name: str,
+):
+    return download_file(folder_name, file_name)
