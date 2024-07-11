@@ -1,38 +1,26 @@
-from pydantic import BaseModel, EmailStr
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from database import Base
 
-class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    role: str = "user"
-    disabled: bool = False
+class User(Base):
+    __tablename__ = "users"
 
-class UserCreate(UserBase):
-    password: str
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role = Column(String, default="user")
+    disabled = Column(Boolean, default=False)
+    vk_id = Column(String, unique=True, nullable=True)
 
-class User(UserBase):
-    hashed_password: str = ""
-    vk_id: str | None = None
+    refresh_tokens = relationship("RefreshToken", back_populates="user")
 
-class UserInDB(User):
-    pass
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
 
-class Token(BaseModel):  
-    access_token: str
-    refresh_token: str
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True)
+    expires_at = Column(DateTime)
+    user_id = Column(Integer, ForeignKey("users.id"))
 
-class TokenData(BaseModel):
-    username: str | None = None
-    role: str | None = None
-    
-class FolderInfo(BaseModel):
-    name: str
-    path: str
-
-class FileInfo(BaseModel):
-    name: str
-    path: str
-    size: int
-
-class FolderContents(BaseModel):
-    folders: list[FolderInfo]
-    files: list[FileInfo]
+    user = relationship("User", back_populates="refresh_tokens")
