@@ -14,6 +14,7 @@ import Container from '@mui/material/Container';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import getLPTheme from '../getLPTheme';
 import { setTokens } from '../utils/auth';
+import config from '../../config';
 
 function Copyright() {
   return (
@@ -33,7 +34,7 @@ export default function SignIn() {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         try {
-            const response = await fetch('http://localhost:8000/api/token', {
+            const response = await fetch(`${config.apiUrl}/api/token`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -61,7 +62,7 @@ export default function SignIn() {
     
     const fetchUserData = async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/users/me', {
+            const response = await fetch(`${config.apiUrl}/api/users/me`, {
                 headers: {
                     'Authorization': `Bearer ${getAccessToken()}`,
                 },
