@@ -16,8 +16,18 @@ from schemas import Token, UserCreate, UserOut, FolderContents
 from vk_auth import vk_login, vk_callback
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from database import create_tables
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    create_tables()
+    yield
+    # Shutdown logic 
+    
+app = FastAPI(root_path="/api", lifespan=lifespan)
 
 origins = ["http://localhost:3000",]
 app.add_middleware(
@@ -28,6 +38,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app = FastAPI(lifespan=lifespan)
+    
 @app.get("/hello")
 def hello_func():
     return "Hello World"
