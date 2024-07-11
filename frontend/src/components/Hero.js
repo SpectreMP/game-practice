@@ -8,12 +8,13 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import axios from 'axios';
+import config from '../../config';
 
 export default function Hero() {
     const handleDownload = async () => {
         try {
             const response = await axios.get(
-                'http://localhost:8000/api/folders/installation-file/baigaal.exe/download',
+                `${config.apiUrl}/api/folders/installation-file/baigaal.exe/download`,
                 {
                     responseType: 'blob',
                 }

@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { getAccessToken } from '../utils/auth';
 import useRefreshToken from '../hooks/useRefreshToken';
+import config from './config';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: `${config.apiUrl}/api`,
 });
 
 axiosInstance.interceptors.request.use(
