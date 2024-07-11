@@ -3,7 +3,7 @@ import { getRefreshToken, setTokens, removeTokens } from '../utils/auth';
 const useRefreshToken = () => {
   const refreshToken = async () => {
     try {
-      const response = await fetch('http://localhost:8000/refresh', {
+      const response = await fetch('http://localhost:8000/api/refresh', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${getRefreshToken()}`,

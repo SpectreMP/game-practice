@@ -3,7 +3,7 @@ import { getAccessToken } from '../utils/auth';
 import useRefreshToken from '../hooks/useRefreshToken';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'http://localhost:8000/api',
 });
 
 axiosInstance.interceptors.request.use(

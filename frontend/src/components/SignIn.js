@@ -33,7 +33,7 @@ export default function SignIn() {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         try {
-            const response = await fetch('http://localhost:8000/token', {
+            const response = await fetch('http://localhost:8000/api/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -61,7 +61,7 @@ export default function SignIn() {
     
     const fetchUserData = async () => {
         try {
-            const response = await fetch('http://localhost:8000/users/me', {
+            const response = await fetch('http://localhost:8000/api/users/me', {
                 headers: {
                     'Authorization': `Bearer ${getAccessToken()}`,
                 },
