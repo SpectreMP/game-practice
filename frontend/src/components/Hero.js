@@ -13,7 +13,7 @@ export default function Hero() {
     const handleDownload = async () => {
         try {
             const response = await axios.get(
-                'http://localhost:8000/folders/installation-file/baigaal.exe/download',
+                'http://localhost:8000/api/folders/installation-file/baigaal.exe/download',
                 {
                     responseType: 'blob',
                 }
