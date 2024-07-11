@@ -4,10 +4,16 @@
   "description": "Node.js is an open-source, cross-platform JavaScript runtime environment.",
   "main": "index.js",
   "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@mui/icons-material": "^5.16.0",
+    "@mui/material": "^5.16.0",
+    "axios": "^1.7.2",
     "corepack": "^0.24.0",
     "npm": "^10.2.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
