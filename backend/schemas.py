@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
+from datetime import datetime
 
 class UserBase(BaseModel):
     username: str
@@ -24,15 +25,12 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-class FolderInfo(BaseModel):
-    name: str
-    path: str
-
 class FileInfo(BaseModel):
-    name: str
-    path: str
-    size: int
+    id: int
+    filename: str
+    is_folder: bool
+    created_at: datetime
+    updated_at: datetime
 
 class FolderContents(BaseModel):
-    folders: List[FolderInfo]
-    files: List[FileInfo]
+    items: List[FileInfo]

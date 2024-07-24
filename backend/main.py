@@ -10,14 +10,15 @@ from crud import (
     delete_refresh_token, update_user_vk_id
 )
 from database import get_db
-from file_operations import create_folder, delete_folder, get_folder_contents, upload_file, delete_file, rename_folder, download_file
+import file_operations
 from models import User
-from schemas import Token, UserCreate, UserOut, FolderContents
+from schemas import Token, UserCreate, UserOut, FolderContents, FileInfo
 from vk_auth import vk_login, vk_callback
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from database import create_tables
 from contextlib import asynccontextmanager
+from typing import Optional
 
 
 @asynccontextmanager
@@ -98,51 +99,61 @@ async def login_vk_route():
 async def vk_callback_route(code: str, db: Session = Depends(get_db)):
     return await vk_callback(code, db)
 
-@app.post("/folders/create")
-async def create_folder_endpoint(
+@app.post("/folders/create", response_model=FileInfo)
+async def create_folder(
     folder_name: str,
-    current_user: User = Depends(get_current_active_user)
+    parent_id: Optional[int] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
-    return create_folder(current_user.username, folder_name)
+    return file_operations.create_folder(db, current_user, folder_name, parent_id)
 
-@app.delete("/folders/{folder_name}")
-async def delete_folder_endpoint(
-    folder_name: str,
-    current_user: User = Depends(get_current_active_user)
+@app.delete("/folders/delete/{folder_id}")
+async def delete_folder(
+    folder_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
-    return delete_folder(current_user.username, folder_name)
+    return file_operations.delete_folder(db, current_user, folder_id)
 
-@app.get("/folders", response_model=FolderContents)
-async def list_folders(current_user: User = Depends(get_current_active_user)):
-    return get_folder_contents(current_user.username)
+@app.get("/files", response_model=FolderContents)
+async def list_files(
+    folder_id: Optional[int] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    items = file_operations.get_folder_contents(db, current_user, folder_id)
+    return FolderContents(items=items)
 
-@app.post("/upload")
-async def upload_file_endpoint(
+@app.post("/upload", response_model=FileInfo)
+async def upload_file(
     file: UploadFile = File(...),
-    folder: str = Form(""),
-    current_user: User = Depends(get_current_active_user)
+    parent_id: Optional[int] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
-    return upload_file(current_user.username, file, folder)
+    return file_operations.upload_file(db, current_user, file, parent_id)
 
-@app.delete("/files/{folder_name}/{file_name}")
-async def delete_file_endpoint(
-    folder_name: str,
-    file_name: str,
-    current_user: User = Depends(get_current_active_user)
+@app.delete("/files/delete/{file_id}")
+async def delete_file(
+    file_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
-    return delete_file(current_user.username, folder_name, file_name)
+    return file_operations.delete_file(db, current_user, file_id)
 
-@app.put("/folders/{old_folder_name}")
-async def edit_folder_endpoint(
-    old_folder_name: str,
-    new_folder_name: str,
-    current_user: User = Depends(get_current_active_user)
+@app.put("/folders/{old_folder_name}", response_model=FileInfo)
+async def rename_file(
+    file_id: int,
+    new_name: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
-    return rename_folder(current_user.username, old_folder_name, new_folder_name)
+    return file_operations.rename_file(db, current_user, file_id, new_name)
 
 @app.get("/folders/{folder_name}/{file_name}/download", response_class=FileResponse)
 async def download_file_endpoint(
     folder_name: str,
     file_name: str,
 ):
-    return download_file(folder_name, file_name)
+    return file_operations.download_file(folder_name, file_name)

@@ -3,70 +3,128 @@ import shutil
 from fastapi.responses import FileResponse
 from fastapi import HTTPException, UploadFile
 from config import BASE_FOLDER_DIR
-from schemas import FolderContents, FolderInfo, FileInfo
+from schemas import FolderContents, FileInfo
+from sqlalchemy.orm import Session
+from models import UserFile, User
+from datetime import datetime
 
-def create_folder(username: str, folder_name: str):
-    folder_path = Path(BASE_FOLDER_DIR) / username / folder_name
+def create_folder(db: Session, user: User, folder_name: str, parent_id: int = None):
+    parent = None
+    if parent_id:
+        parent = db.query(UserFile).filter(UserFile.id == parent_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent folder not found")
+
+    folder_path = Path(BASE_FOLDER_DIR) / user.username / folder_name
+    if parent:
+        folder_path = Path(parent.file_path) / folder_name
+
+    new_folder = UserFile(
+        user_id=user.id,
+        filename=folder_name,
+        file_path=str(folder_path),
+        is_folder=True,
+        parent_id=parent_id,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+    db.add(new_folder)
+    db.commit()
+    db.refresh(new_folder)
+
     folder_path.mkdir(parents=True, exist_ok=True)
-    return {"message": f"Folder '{folder_name}' created successfully"}
 
-def delete_folder(username: str, folder_name: str):
-    folder_path = Path(BASE_FOLDER_DIR) / username / folder_name
-    if not folder_path.exists():
+    return new_folder
+
+def delete_folder(db: Session, user: User, folder_id: int):
+    folder = db.query(UserFile).filter(UserFile.id == folder_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
+    if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
-    shutil.rmtree(folder_path)
-    return {"message": f"Folder '{folder_name}' deleted successfully"}
 
-def get_folder_contents(username: str) -> FolderContents:
-    user_folder = Path(BASE_FOLDER_DIR) / username
-    user_folder.mkdir(parents=True, exist_ok=True)
-    
-    folders = []
-    files = []
-    for item in user_folder.iterdir():
-        if item.is_dir():
-            folders.append(FolderInfo(name=item.name, path=str(item)))
-        else:
-            files.append(FileInfo(name=item.name, path=str(item), size=item.stat().st_size))
-    return FolderContents(folders=folders, files=files)
+    delete_recursive(db, folder)
 
-def upload_file(username: str, file: UploadFile, folder: str):
-    user_folder = Path(BASE_FOLDER_DIR) / username
-    user_folder.mkdir(parents=True, exist_ok=True)
-    
-    if folder:
-        upload_folder = user_folder / folder
-        upload_folder.mkdir(parents=True, exist_ok=True)
+    db.delete(folder)
+    db.commit()
+
+    shutil.rmtree(folder.file_path)
+    return {"message": f"Folder '{folder.filename}' deleted successfully"}
+
+def delete_recursive(db: Session, item: UserFile):
+    for child in item.children:
+        delete_recursive(db, child)
+        db.delete(child)
+
+def get_folder_contents(db: Session, user: User, folder_id: int = None):
+    query = db.query(UserFile).filter(UserFile.user_id == user.id)
+    if folder_id:
+        query = query.filter(UserFile.parent_id == folder_id)
     else:
-        upload_folder = user_folder
+        query = query.filter(UserFile.parent_id == None)
     
-    file_path = upload_folder / file.filename
-    
+    return query.all()
+
+def upload_file(db: Session, user: User, file: UploadFile, parent_id: int = None):
+    parent = None
+    if parent_id:
+        parent = db.query(UserFile).filter(UserFile.id == parent_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent folder not found")
+
+    file_path = Path(BASE_FOLDER_DIR) / user.username / file.filename
+    if parent:
+        file_path = Path(parent.file_path) / file.filename
+
+    new_file = UserFile(
+        user_id=user.id,
+        filename=file.filename,
+        file_path=str(file_path),
+        is_folder=False,
+        parent_id=parent_id,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+    db.add(new_file)
+    db.commit()
+    db.refresh(new_file)
+
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    
-    return {"message": f"File '{file.filename}' uploaded successfully"}
 
-def delete_file(username: str, folder_name: str, file_name: str):
-    file_path = Path(BASE_FOLDER_DIR) / username / folder_name / file_name
-    if not file_path.exists():
+    return new_file
+
+def delete_file(db: Session, user: User, file_id: int):
+    file = db.query(UserFile).filter(UserFile.id == file_id, UserFile.user_id == user.id, UserFile.is_folder == False).first()
+    if not file:
         raise HTTPException(status_code=404, detail="File not found")
-    file_path.unlink()
-    return {"message": f"File '{file_name}' deleted successfully"}
 
-def rename_folder(username: str, old_folder_name: str, new_folder_name: str):
-    old_folder_path = Path(BASE_FOLDER_DIR) / username / old_folder_name
-    new_folder_path = Path(BASE_FOLDER_DIR) / username / new_folder_name
-    
-    if not old_folder_path.exists():
-        raise HTTPException(status_code=404, detail="Old folder not found")
-    
-    if new_folder_path.exists():
-        raise HTTPException(status_code=400, detail="New folder name already exists")
-    
-    old_folder_path.rename(new_folder_path)
-    
-    return {"message": f"Folder '{old_folder_name}' renamed to '{new_folder_name}' successfully"}
+    db.delete(file)
+    db.commit()
+
+    Path(file.file_path).unlink()
+    return {"message": f"File '{file.filename}' deleted successfully"}
+
+def rename_file(db: Session, user: User, file_id: int, new_name: str):
+    file = db.query(UserFile).filter(UserFile.id == file_id, UserFile.user_id == user.id).first()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    old_path = Path(file.file_path)
+    new_path = old_path.parent / new_name
+
+    if new_path.exists():
+        raise HTTPException(status_code=400, detail="File with this name already exists")
+
+    old_path.rename(new_path)
+    file.filename = new_name
+    file.file_path = str(new_path)
+    file.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(file)
+
+    return file
 
 def download_file(folder_name: str, file_name: str):
     file_path = Path(BASE_FOLDER_DIR) / folder_name / file_name
