@@ -32,9 +32,9 @@ class UserFile(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     filename = Column(String)
-    file_path = Column(String)
+    relative_path = Column(String)
     is_folder = Column(Boolean, default=False)
-    parent_id = Column(Integer, ForeignKey("user_files.id"), nullable=True) # "self-referential relationship"
+    parent_id = Column(Integer, ForeignKey("user_files.id"), nullable=True)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
 

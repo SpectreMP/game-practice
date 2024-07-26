@@ -7,8 +7,11 @@ class UserBase(BaseModel):
     email: EmailStr
     role: str = "user"
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
     password: str
+    role: str = "user"
 
 class UserOut(UserBase):
     id: int
@@ -16,21 +19,35 @@ class UserOut(UserBase):
     vk_id: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
+    token_type: str = "bearer"
 
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-class FileInfo(BaseModel):
-    id: int
-    filename: str
-    is_folder: bool
-    created_at: datetime
-    updated_at: datetime
+class FolderCreate(BaseModel):
+    name: str
+    parent: Optional[int] = None
 
-class FolderContents(BaseModel):
-    items: List[FileInfo]
+class FolderSchema(BaseModel):
+    id: int
+    name: str
+    parent: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class FileSchema(BaseModel):
+    id: int
+    name: str
+    url: str
+    size: int
+    folder: Optional[int] = None
+    thumbnail: str
+
+    class Config:
+        from_attributes = True

@@ -2,7 +2,7 @@ import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from config import VK_CLIENT_ID, VK_CLIENT_SECRET, VK_REDIRECT_URI
-from crud import get_user_by_username, create_user, update_user_vk_id
+from user_operations import get_user_by_username, create_user, update_user_vk_id
 from schemas import UserCreate
 from auth import create_access_token, create_refresh_token
 
@@ -39,9 +39,9 @@ async def vk_callback(code: str, db: Session):
                 password="",
                 role="user"
             ))
-            update_user_vk_id(db, user.id, vk_user_id)
+            update_user_vk_id(db, user.id, str(vk_user_id))
         
-        access_token = create_access_token(data={"sub": username, "role": "user"})
-        refresh_token = create_refresh_token(data={"sub": username, "role": "user"})
+        access_token = create_access_token(data={"sub": username, "role": user.role})
+        refresh_token = create_refresh_token(data={"sub": username, "role": user.role})
         
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}

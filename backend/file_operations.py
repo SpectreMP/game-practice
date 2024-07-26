@@ -1,28 +1,50 @@
+from fastapi import HTTPException, UploadFile
+from sqlalchemy.orm import Session
+from models import User, UserFile
+from schemas import FolderSchema, FileSchema
+from typing import List, Optional
 from pathlib import Path
 import shutil
-from fastapi.responses import FileResponse
-from fastapi import HTTPException, UploadFile
-from config import BASE_FOLDER_DIR
-from schemas import FolderContents, FileInfo
-from sqlalchemy.orm import Session
-from models import UserFile, User
 from datetime import datetime
+from config import BASE_FOLDER_DIR, THUMBNAIL_DIR, BASE_URL
+from PIL import Image
+from fastapi.responses import FileResponse
 
-def create_folder(db: Session, user: User, folder_name: str, parent_id: int = None):
+def get_absolute_path(user: User, relative_path: str) -> Path:
+    return Path(BASE_FOLDER_DIR) / user.username / relative_path
+
+def get_folders(db: Session, user: User, parent_id: Optional[int] = None) -> List[FolderSchema]:
+    query = db.query(UserFile).filter(UserFile.user_id == user.id, UserFile.is_folder == True)
+    query = query.filter(UserFile.parent_id == parent_id if parent_id is not None else UserFile.parent_id == None)
+    folders = query.all()
+    return [FolderSchema(id=folder.id, name=folder.filename, parent=folder.parent_id) for folder in folders]
+
+def create_folder(db: Session, user: User, folder_name: str, parent_id: Optional[int] = None) -> FolderSchema:
     parent = None
     if parent_id:
-        parent = db.query(UserFile).filter(UserFile.id == parent_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
+        parent = db.query(UserFile).filter(
+            UserFile.id == parent_id, 
+            UserFile.user_id == user.id, 
+            UserFile.is_folder == True
+        ).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent folder not found")
+    
+    relative_path = folder_name if not parent else str(Path(parent.relative_path) / folder_name)
+    
+    existing_folder = db.query(UserFile).filter(
+        UserFile.user_id == user.id,
+        UserFile.relative_path == relative_path,
+        UserFile.is_folder == True
+    ).first()
 
-    folder_path = Path(BASE_FOLDER_DIR) / user.username / folder_name
-    if parent:
-        folder_path = Path(parent.file_path) / folder_name
+    if existing_folder:
+        raise HTTPException(status_code=400, detail="A folder with this name already exists in the specified location")
 
     new_folder = UserFile(
         user_id=user.id,
         filename=folder_name,
-        file_path=str(folder_path),
+        relative_path=relative_path,
         is_folder=True,
         parent_id=parent_id,
         created_at=datetime.utcnow(),
@@ -33,9 +55,10 @@ def create_folder(db: Session, user: User, folder_name: str, parent_id: int = No
     db.commit()
     db.refresh(new_folder)
 
-    folder_path.mkdir(parents=True, exist_ok=True)
+    absolute_path = get_absolute_path(user, relative_path)
+    absolute_path.mkdir(parents=True, exist_ok=True)
 
-    return new_folder
+    return FolderSchema(id=new_folder.id, name=new_folder.filename, parent=new_folder.parent_id)
 
 def delete_folder(db: Session, user: User, folder_id: int):
     folder = db.query(UserFile).filter(UserFile.id == folder_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
@@ -47,40 +70,64 @@ def delete_folder(db: Session, user: User, folder_id: int):
     db.delete(folder)
     db.commit()
 
-    shutil.rmtree(folder.file_path)
-    return {"message": f"Folder '{folder.filename}' deleted successfully"}
+    absolute_path = get_absolute_path(user, folder.relative_path)
+    shutil.rmtree(absolute_path, ignore_errors=True)
 
-def delete_recursive(db: Session, item: UserFile):
-    for child in item.children:
-        delete_recursive(db, child)
-        db.delete(child)
-
-def get_folder_contents(db: Session, user: User, folder_id: int = None):
-    query = db.query(UserFile).filter(UserFile.user_id == user.id)
-    if folder_id:
-        query = query.filter(UserFile.parent_id == folder_id)
-    else:
-        query = query.filter(UserFile.parent_id == None)
+def get_files(db: Session, user: User, folder_id: Optional[int] = None) -> List[FileSchema]:
+    query = db.query(UserFile).filter(UserFile.user_id == user.id, UserFile.is_folder == False)
+    query = query.filter(UserFile.parent_id == folder_id if folder_id else UserFile.parent_id == None)
     
-    return query.all()
+    files = query.all()
+    file_schemas = []
+    
+    for file in files:
+        absolute_path = get_absolute_path(user, file.relative_path)
+        thumbnail_path = get_thumbnail_path(absolute_path, user.username)
+        
+        file_schemas.append(FileSchema(
+            id=file.id,
+            name=file.filename,
+            url=f"{BASE_URL}/api/files/{file.id}/download",
+            size=absolute_path.stat().st_size,
+            folder=file.parent_id,
+            thumbnail=thumbnail_path
+        ))
+    
+    return file_schemas
 
-def upload_file(db: Session, user: User, file: UploadFile, parent_id: int = None):
+def create_thumbnail(file_path: Path, user_username: str, thumbnail_size=(100, 100)) -> str:
+    user_thumbnail_dir = Path(THUMBNAIL_DIR) / user_username
+    user_thumbnail_dir.mkdir(parents=True, exist_ok=True)
+    
+    thumbnail_path = user_thumbnail_dir / f"th_{file_path.stem}.webp"
+    
+    with Image.open(file_path) as img:
+        img.thumbnail(thumbnail_size)
+        img.save(thumbnail_path, "WEBP")
+    
+    return f"{BASE_URL}/api/thumbnails/{user_username}/{thumbnail_path.name}"
+
+def get_thumbnail_path(file_path: Path, user_username: str) -> str:
+    if file_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.bmp']:
+        return create_thumbnail(file_path, user_username)
+    else:
+        return f"{BASE_URL}/path/to/default/icon.png"
+
+def upload_file(db: Session, user: User, file: UploadFile, folder_id: Optional[int] = None) -> FileSchema:
     parent = None
-    if parent_id:
-        parent = db.query(UserFile).filter(UserFile.id == parent_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
+    if folder_id:
+        parent = db.query(UserFile).filter(UserFile.id == folder_id, UserFile.user_id == user.id, UserFile.is_folder == True).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent folder not found")
 
-    file_path = Path(BASE_FOLDER_DIR) / user.username / file.filename
-    if parent:
-        file_path = Path(parent.file_path) / file.filename
+    relative_path = file.filename if not parent else str(Path(parent.relative_path) / file.filename)
 
     new_file = UserFile(
         user_id=user.id,
         filename=file.filename,
-        file_path=str(file_path),
+        relative_path=relative_path,
         is_folder=False,
-        parent_id=parent_id,
+        parent_id=folder_id,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -89,47 +136,51 @@ def upload_file(db: Session, user: User, file: UploadFile, parent_id: int = None
     db.commit()
     db.refresh(new_file)
 
-    with file_path.open("wb") as buffer:
+    absolute_path = get_absolute_path(user, relative_path)
+    with absolute_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    return new_file
+    thumbnail_path = get_thumbnail_path(absolute_path, user.username)
+
+    return FileSchema(
+        id=new_file.id,
+        name=new_file.filename,
+        url=f"{BASE_URL}/api/files/{new_file.id}/download",
+        size=absolute_path.stat().st_size,
+        folder=new_file.parent_id,
+        thumbnail=thumbnail_path
+    )
 
 def delete_file(db: Session, user: User, file_id: int):
     file = db.query(UserFile).filter(UserFile.id == file_id, UserFile.user_id == user.id, UserFile.is_folder == False).first()
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
+    absolute_path = get_absolute_path(user, file.relative_path)
+    thumbnail_path = Path(THUMBNAIL_DIR) / user.username / f"th_{absolute_path.stem}.webp"
+
     db.delete(file)
     db.commit()
 
-    Path(file.file_path).unlink()
-    return {"message": f"File '{file.filename}' deleted successfully"}
-
-def rename_file(db: Session, user: User, file_id: int, new_name: str):
+    absolute_path.unlink(missing_ok=True)
+    thumbnail_path.unlink(missing_ok=True)
+  
+def delete_recursive(db: Session, item: UserFile):
+    for child in item.children:
+        delete_recursive(db, child)
+        db.delete(child)
+        
+def download_file(db: Session, user: User, file_id: int):
     file = db.query(UserFile).filter(UserFile.id == file_id, UserFile.user_id == user.id).first()
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
-    old_path = Path(file.file_path)
-    new_path = old_path.parent / new_name
+    absolute_path = get_absolute_path(user, file.relative_path)
+    if not absolute_path.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
 
-    if new_path.exists():
-        raise HTTPException(status_code=400, detail="File with this name already exists")
-
-    old_path.rename(new_path)
-    file.filename = new_name
-    file.file_path = str(new_path)
-    file.updated_at = datetime.utcnow()
-
-    db.commit()
-    db.refresh(file)
-
-    return file
-
-def download_file(folder_name: str, file_name: str):
-    file_path = Path(BASE_FOLDER_DIR) / folder_name / file_name
-    
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    return FileResponse(file_path, filename=file_name)
+    return FileResponse(
+        path=absolute_path, 
+        filename=file.filename, 
+        media_type='application/octet-stream'
+    )
