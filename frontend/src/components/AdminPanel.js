@@ -29,6 +29,8 @@ import { FileManager } from 'filemanager-element';
 import 'filemanager-element/FileManager.css';
 import { useNavigate } from 'react-router-dom';
 import { getAccessToken } from '../utils/auth';
+import config from '../../config';
+
 
 const drawerWidth = 240;
 
@@ -59,7 +61,7 @@ export default function AdminPanel() {
     useEffect(() => {
         const checkAdminStatus = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/users/me', {
+                const response = await fetch(`${config.apiUrl}/api/users/me`, {
                     headers: {
                         'Authorization': `Bearer ${getAccessToken()}`,
                     },
@@ -83,7 +85,7 @@ export default function AdminPanel() {
         checkAdminStatus();
 
         FileManager.register('file-manager', {
-            endpoint: 'http://localhost:8000/api',
+            endpoint: `${config.apiUrl}/api`,
             httpHeaders: {
                 Authorization: `Bearer ${getAccessToken()}`,
             },

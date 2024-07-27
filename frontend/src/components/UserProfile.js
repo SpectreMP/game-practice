@@ -18,6 +18,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { getAccessToken, removeTokens } from '../utils/auth';
+import config from '../../config';
 
 export default function UserProfile() {
     const [mode, setMode] = React.useState('dark');
@@ -28,7 +29,7 @@ export default function UserProfile() {
     React.useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/users/me', {
+                const response = await fetch(`${config.apiUrl}/api/users/me`, {
                     headers: {
                         'Authorization': `Bearer ${getAccessToken()}`,
                     },
