@@ -1,3 +1,7 @@
+/**
+ * Component for login.
+ */
+
 import * as React from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
@@ -47,12 +51,9 @@ export default function SignIn() {
             if (response.ok) {
                 const { access_token, refresh_token } = await response.json();
                 setTokens(access_token, refresh_token);
-                // Получаем данные пользователя
                 await fetchUserData();
-                // Перенаправляем на главную страницу или в профиль
                 window.location.href = '/';
             } else {
-                // Обработка ошибки авторизации
                 console.error('Ошибка авторизации');
             }
         } catch (error) {

@@ -23,14 +23,19 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /.(js|jsx)$/,
+        test: /.(js|jsx|tsx)$/,
         exclude: /node_modules/,
         use: [ "babel-loader" ],
+      },
+      {
+        test: /\.css$/,
+        test: /\.(sass|less|css)$/,
+        use: ["style-loader", "css-loader", 'sass-loader'],
       },
     ],
   },
   resolve: {
-    extensions: ["*", ".js", ".jsx"],
+    extensions: ["*", ".js", ".jsx", ".tsx"],
   },
   devServer: {
     historyApiFallback: true,
