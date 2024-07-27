@@ -1,3 +1,7 @@
+/**
+ *  The main banner on the homepage.
+ */
+
 import * as React from 'react';
 import { alpha } from '@mui/material';
 import Box from '@mui/material/Box';
@@ -5,7 +9,6 @@ import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import axios from 'axios';
 import config from '../../config';
@@ -20,9 +23,8 @@ export default function Hero() {
                 }
             );
 
-            // Получаем имя файла из URL
             const urlParts = response.config.url.split('/');
-            const fileName = urlParts[urlParts.length - 2]; // Предполагаем, что имя файла - это предпоследняя часть URL
+            const fileName = urlParts[urlParts.length - 2];
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');

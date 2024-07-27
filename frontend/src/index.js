@@ -6,6 +6,7 @@ import SignUp from './components/SignUp';
 import SignIn from './components/SignIn';
 import AdminPanel from './components/AdminPanel';
 import UserProfile from './components/UserProfile';
+import FileManagerWrapper from './components/FileManagerWrapper';
 
 const rootElement = document.getElementById('root');
 const root = ReactDOM.createRoot(rootElement);
@@ -17,6 +18,7 @@ root.render(
             <Route path="/sign-up" element={<SignUp />} />
             <Route path="/sign-in" element={<SignIn />} />
             <Route path="/profile" element={<UserProfile />} />
+            <Route path="/admin" element={<AdminPanel />} />
         </Routes>
     </Router>
 );

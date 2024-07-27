@@ -1,8 +1,20 @@
+"""
+Functions for working with users.
+"""
+
 from sqlalchemy.orm import Session
 from models import User, RefreshToken
 from schemas import UserCreate
 from password_utils import get_password_hash, verify_password
 from datetime import datetime, timedelta
+
+def authenticate_user(db: Session, username: str, password: str):
+    user = get_user_by_username(db, username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
 
 def get_user(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
@@ -20,14 +32,6 @@ def create_user(db: Session, user: UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
-
-def authenticate_user(db: Session, username: str, password: str):
-    user = get_user_by_username(db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
 
 def create_refresh_token(db: Session, user_id: int, token: str):
     db_token = RefreshToken(user_id=user_id, token=token, expires_at=datetime.utcnow() + timedelta(days=30))
@@ -47,3 +51,5 @@ def update_user_vk_id(db: Session, user_id: int, vk_id: str):
         db.commit()
         db.refresh(user)
     return user
+
+
