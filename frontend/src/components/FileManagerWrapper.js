@@ -1,61 +1,37 @@
-/**
- * A wrapper for the file manager component.
- */
-
 import React, { useEffect, useRef, useState } from 'react';
 import { FileManager } from 'filemanager-element';
 import 'filemanager-element/FileManager.css';
 import config from '../../config';
 import { getAccessToken } from '../utils/auth';
-import { Button, Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import axios from 'axios';
+import { styled } from '@mui/material/styles';
 
 const FileManagerWrapper = () => {
     const [selectedFile, setSelectedFile] = useState(null);
-    const [isFileManagerVisible, setIsFileManagerVisible] = useState(true);
     const fileManagerRef = useRef(null);
 
     useEffect(() => {
         const setupFileManager = async () => {
-            if (!fileManagerRef.current) return;
-
-            await FileManager.register('my-file-manager', {
+            FileManager.register('my-file-manager', {
                 endpoint: `${config.apiUrl}/api`,
                 httpHeaders: {
                     Authorization: `Bearer ${getAccessToken()}`,
                 },
-                createFolder: async (params) => {
-                    try {
-                        const response = await axios.post(`${config.apiUrl}/api/folders`, params, {
-                            headers: {
-                                Authorization: `Bearer ${getAccessToken()}`,
-                            },
-                        });
-                        return response.data;
-                    } catch (error) {
-                        console.error('Error creating folder:', error.response?.data || error.message);
-                        throw error;
-                    }
-                },
-            });
-
-            const fileManagerElement = fileManagerRef.current;
-            fileManagerElement.addEventListener('selectfile', (event) => {
-                setSelectedFile(event.detail);
-            });
-            fileManagerElement.addEventListener('close', () => {
-                setIsFileManagerVisible(false);
             });
         };
 
         setupFileManager();
+        const fileManager = document.querySelector('my-file-manager');
 
-        return () => {
-            if (fileManagerRef.current) {
-                fileManagerRef.current.removeEventListener('selectfile', () => {});
-                fileManagerRef.current.removeEventListener('close', () => {});
-            }
-        };
+        fileManager.addEventListener('selectfile', (e) => {
+            console.log('fileselect', e.detail);
+            setSelectedFile(e.detail);
+        });
+        // fileManager.addEventListener('close', (e) => {
+        //     e.currentTarget.setAttribute('hidden', '');
+        //     console.log('close');
+        // });
     }, []);
 
     const handleDownload = async () => {
@@ -71,7 +47,9 @@ const FileManagerWrapper = () => {
                     }
                 );
 
-                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const url = window.URL.createObjectURL(
+                    new Blob([response.data])
+                );
                 const link = document.createElement('a');
                 link.href = url;
                 link.setAttribute('download', selectedFile.name);
@@ -85,43 +63,58 @@ const FileManagerWrapper = () => {
         }
     };
 
+    const StyledBox = styled(Box)(({ theme }) => ({
+        position: 'absolute',
+        top: '25%',
+        left: '50%',
+        transform: 'translate(-50%)',
+        width: '50vw',
+        height: '60vh', // Увеличиваем высоту
+        maxWidth: '800px',
+        maxHeight: '600px',
+        backgroundColor: theme.palette.background.paper,
+        boxShadow: theme.shadows[24],
+        padding: theme.spacing(4),
+        borderRadius: theme.shape.borderRadius,
+        outline: 'none',
+    }));
     
-    const handleShowFileManager = () => {
-        setIsFileManagerVisible(true);
-    };
-
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Button variant="contained" color="primary" onClick={handleShowFileManager} sx={{ mb: 2 }}>
-                Show File Manager
-            </Button>
-            {isFileManagerVisible && (
-                <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
-                    <my-file-manager
-                        ref={fileManagerRef}
-                        lazy-folders="true"
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            width: '100%',
-                            height: '100%',
-                        }}
-                    />
-                </Box>
-            )}
-            {selectedFile && (
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleDownload}
-                    sx={{ mt: 2 }}
-                >
-                    Скачать {selectedFile.name}
-                </Button>
-            )}
+        <Box
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'space-between', 
+                width: '100%',
+                height: '80vh',
+                position: 'relative',
+                padding: '20px 0', 
+            }}
+        >
+            <Box sx={{ width: '100%', height: '70%', position: 'relative' }}>
+                <StyledBox>
+                    <my-file-manager lazy-folders />
+                </StyledBox>
+            </Box>
+            <Box
+                sx={{
+                    width: '50vw',
+                    maxWidth: '800px',
+                    marginTop: '20px',  
+                }}
+            >
+                {selectedFile && (
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleDownload}
+                        fullWidth
+                    >
+                        Скачать {selectedFile.name}
+                    </Button>
+                )}
+            </Box>
         </Box>
     );
 };
