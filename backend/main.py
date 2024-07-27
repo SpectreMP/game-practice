@@ -16,6 +16,7 @@ from vk_auth import vk_callback, vk_login
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from config import THUMBNAIL_DIR, CORS_ORIGINS
+from fastapi.responses import FileResponse
 
 async def lifespan(app: FastAPI):
     create_tables()
@@ -119,6 +120,10 @@ async def delete_file(file_id: int, current_user: User = Depends(get_current_act
 @app.get("/files/{file_id}/download")
 async def download_file(file_id: int, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     return file_operations.download_file(db, current_user, file_id)
+
+@app.get("/files/{file_id}/read")
+async def read_file(file_id: int, db: Session = Depends(get_db)):
+    return file_operations.read_file_content(db, file_id)
 
 @app.get("/login/vk")
 async def login_vk_route():
