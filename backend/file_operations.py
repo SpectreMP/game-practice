@@ -12,7 +12,8 @@ import shutil
 from datetime import datetime
 from config import BASE_FOLDER_DIR, THUMBNAIL_DIR, BASE_URL
 from PIL import Image
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+
 
 def get_absolute_path(user: User, relative_path: str) -> Path:
     return Path(BASE_FOLDER_DIR) / user.username / relative_path
@@ -188,3 +189,17 @@ def download_file(db: Session, user: User, file_id: int):
         filename=file.filename, 
         media_type='application/octet-stream'
     )
+
+def read_file_content(db: Session, file_id: int):
+    file = db.query(UserFile).filter(UserFile.id == file_id).first()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    absolute_path=Path(BASE_FOLDER_DIR) / 'admin' / file.relative_path # hardcoded by now
+   
+    try:
+        with open(absolute_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return {"id": file.id, "name": file.filename, "content": content}
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File is not a text file")
