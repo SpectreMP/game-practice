@@ -1,4 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+/**
+ * A wrapper for the file manager component.
+ */
+
+import React, { useEffect, useRef, useState } from 'react';
 import { FileManager } from 'filemanager-element';
 import 'filemanager-element/FileManager.css';
 import config from '../../config';
@@ -7,8 +11,9 @@ import { Button, Box } from '@mui/material';
 import axios from 'axios';
 
 const FileManagerWrapper = () => {
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isFileManagerVisible, setIsFileManagerVisible] = useState(true);
     const fileManagerRef = useRef(null);
-    const downloadButtonRef = useRef(null);
 
     useEffect(() => {
         const setupFileManager = async () => {
@@ -36,13 +41,10 @@ const FileManagerWrapper = () => {
 
             const fileManagerElement = fileManagerRef.current;
             fileManagerElement.addEventListener('selectfile', (event) => {
-                if (downloadButtonRef.current) {
-                    downloadButtonRef.current.textContent = `Скачать ${event.detail.name}`;
-                    downloadButtonRef.current.style.display = 'block';
-                }
+                setSelectedFile(event.detail);
             });
             fileManagerElement.addEventListener('close', () => {
-                fileManagerElement.setAttribute('hidden', '');
+                setIsFileManagerVisible(false);
             });
         };
 
@@ -57,70 +59,69 @@ const FileManagerWrapper = () => {
     }, []);
 
     const handleDownload = async () => {
-        const fileManagerElement = fileManagerRef.current;
-        if (fileManagerElement) {
-            const selectedFile = fileManagerElement.selectedFile;
-            if (selectedFile) {
-                try {
-                    const response = await axios.get(
-                        `${config.apiUrl}/api/files/${selectedFile.id}/download`,
-                        {
-                            responseType: 'blob',
-                            headers: {
-                                Authorization: `Bearer ${getAccessToken()}`,
-                            },
-                        }
-                    );
+        if (selectedFile) {
+            try {
+                const response = await axios.get(
+                    `${config.apiUrl}/api/files/${selectedFile.id}/download`,
+                    {
+                        responseType: 'blob',
+                        headers: {
+                            Authorization: `Bearer ${getAccessToken()}`,
+                        },
+                    }
+                );
 
-                    const url = window.URL.createObjectURL(new Blob([response.data]));
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.setAttribute('download', selectedFile.name);
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
-                } catch (error) {
-                    console.error('Ошибка при скачивании файла', error);
-                }
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', selectedFile.name);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Ошибка при скачивании файла', error);
             }
         }
     };
 
+    
     const handleShowFileManager = () => {
-        if (fileManagerRef.current) {
-            fileManagerRef.current.removeAttribute('hidden');
-        }
+        setIsFileManagerVisible(true);
     };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Button onClick={handleShowFileManager}>Показать файловый менеджер</Button>
-            <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
-                <my-file-manager
-                    ref={fileManagerRef}
-                    lazy-folders="true"
-                    hidden
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        width: '100%',
-                        height: '100%',
-                    }}
-                />
-            </Box>
-            <Button
-                ref={downloadButtonRef}
-                variant="contained"
-                color="primary"
-                onClick={handleDownload}
-                sx={{ mt: 2, display: 'none' }}
-            >
-                Скачать файл
+            <Button variant="contained" color="primary" onClick={handleShowFileManager} sx={{ mb: 2 }}>
+                Show File Manager
             </Button>
+            {isFileManagerVisible && (
+                <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
+                    <my-file-manager
+                        ref={fileManagerRef}
+                        lazy-folders="true"
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            width: '100%',
+                            height: '100%',
+                        }}
+                    />
+                </Box>
+            )}
+            {selectedFile && (
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleDownload}
+                    sx={{ mt: 2 }}
+                >
+                    Скачать {selectedFile.name}
+                </Button>
+            )}
         </Box>
     );
 };
