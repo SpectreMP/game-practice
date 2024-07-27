@@ -15,7 +15,7 @@ import user_operations
 from vk_auth import vk_callback, vk_login
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-from config import THUMBNAIL_DIR
+from config import THUMBNAIL_DIR, CORS_ORIGINS
 
 async def lifespan(app: FastAPI):
     create_tables()
@@ -24,16 +24,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(root_path="/api", lifespan=lifespan)
 app.mount("/thumbnails", StaticFiles(directory=THUMBNAIL_DIR), name="thumbnails")
 
-origins = [
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "https://localhost:3000",
-    "https://localhost:8000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
