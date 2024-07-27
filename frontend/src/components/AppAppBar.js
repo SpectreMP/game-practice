@@ -1,3 +1,7 @@
+/**
+ * Application top navigation bar.
+ */
+
 import * as React from 'react';
 import PropTypes from 'prop-types';
 
@@ -12,8 +16,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Drawer from '@mui/material/Drawer';
 import MenuIcon from '@mui/icons-material/Menu';
 import ToggleColorMode from './ToggleColorMode';
-import { Link as RouterLink } from 'react-router-dom';
-
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { getAccessToken, removeTokens } from '../utils/auth';
 
 const logoStyle = {
   width: '140px',
@@ -23,6 +27,12 @@ const logoStyle = {
 
 function AppAppBar({ mode, toggleColorMode }) {
   const [open, setOpen] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    setIsLoggedIn(!!getAccessToken());
+  }, []);
 
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
@@ -40,6 +50,12 @@ function AppAppBar({ mode, toggleColorMode }) {
       });
       setOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    removeTokens();
+    setIsLoggedIn(false);
+    navigate('/');
   };
 
   return (
@@ -135,24 +151,48 @@ function AppAppBar({ mode, toggleColorMode }) {
               }}
             >
               <ToggleColorMode mode={mode} toggleColorMode={toggleColorMode} />
-              <Button
-                color="primary"
-                variant="text"
-                size="small"
-                component={RouterLink}
-                to="/sign-in"
-              >
-                Авторизация
-              </Button>
-              <Button
-                color="primary"
-                variant="contained"
-                size="small"
-                component={RouterLink}
-                to="/sign-up"
-              >
-                Регистрация
-              </Button>
+              {isLoggedIn ? (
+                <>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    component={RouterLink}
+                    to="/profile"
+                    sx={{ ml: 2 }}
+                  >
+                    Профиль
+                  </Button>
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    onClick={handleLogout}
+                    sx={{ ml: 2 }}
+                  >
+                    Выйти
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    color="primary"
+                    variant="text"
+                    component={RouterLink}
+                    to="/sign-in"
+                    sx={{ ml: 2 }}
+                  >
+                    Войти
+                  </Button>
+                  <Button
+                    color="primary"
+                    variant="contained"
+                    component={RouterLink}
+                    to="/sign-up"
+                    sx={{ ml: 2 }}
+                  >
+                    Регистрация
+                  </Button>
+                </>
+              )}
             </Box>
             <Box sx={{ display: { sm: '', md: 'none' } }}>
               <Button
@@ -197,30 +237,25 @@ function AppAppBar({ mode, toggleColorMode }) {
                   </MenuItem>
                   <MenuItem onClick={() => scrollToSection('faq')}>FAQ</MenuItem>
                   <Divider />
-                  <MenuItem>
-                    <Button
-                      color="primary"
-                      variant="contained"
-                      component="a"
-                      href="/material-ui/getting-started/templates/sign-up/"
-                      target="_blank"
-                      sx={{ width: '100%' }}
-                    >
-                      Sign up
-                    </Button>
-                  </MenuItem>
-                  <MenuItem>
-                    <Button
-                      color="primary"
-                      variant="outlined"
-                      component="a"
-                      href="/material-ui/getting-started/templates/sign-in/"
-                      target="_blank"
-                      sx={{ width: '100%' }}
-                    >
-                      Sign in
-                    </Button>
-                  </MenuItem>
+                  {isLoggedIn ? (
+                    <>
+                      <MenuItem component={RouterLink} to="/profile">
+                        Профиль
+                      </MenuItem>
+                      <MenuItem onClick={handleLogout}>
+                        Выйти
+                      </MenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <MenuItem component={RouterLink} to="/sign-in">
+                        Войти
+                      </MenuItem>
+                      <MenuItem component={RouterLink} to="/sign-up">
+                        Регистрация
+                      </MenuItem>
+                    </>
+                  )}
                 </Box>
               </Drawer>
             </Box>

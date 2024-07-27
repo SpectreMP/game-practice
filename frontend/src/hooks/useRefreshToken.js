@@ -1,5 +1,5 @@
 import { getRefreshToken, setTokens, removeTokens } from '../utils/auth';
-import config from './config';
+import config from '../../config';
 
 const useRefreshToken = () => {
   const refreshToken = async () => {
