@@ -1,3 +1,7 @@
+"""
+Functions for authentication and authorization.
+"""
+
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from typing import Optional

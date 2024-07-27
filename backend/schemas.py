@@ -1,3 +1,7 @@
+"""
+Pydantic models for data validation.
+"""
+
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime

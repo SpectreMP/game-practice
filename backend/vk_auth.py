@@ -1,3 +1,7 @@
+"""
+Implementation of authorization via VK.
+"""
+
 import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session

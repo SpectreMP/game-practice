@@ -1,3 +1,7 @@
+"""
+The main FastAPI application file containing all endpoints.
+"""
+
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session

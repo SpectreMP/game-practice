@@ -1,3 +1,7 @@
+"""
+Functions for working with files and folders.
+"""
+
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from models import User, UserFile

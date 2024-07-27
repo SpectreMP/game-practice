@@ -1,3 +1,7 @@
+"""
+Functions for working with users.
+"""
+
 from sqlalchemy.orm import Session
 from models import User, RefreshToken
 from schemas import UserCreate
