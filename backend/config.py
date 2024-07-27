@@ -1,3 +1,7 @@
+"""
+Configuration parameters for the application.
+"""
+
 import os
 from dotenv import load_dotenv
 
@@ -9,6 +13,8 @@ ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES"))
 BASE_FOLDER_DIR = os.getenv("BASE_FOLDER_DIR")
+THUMBNAIL_DIR = os.getenv("THUMBNAIL_DIR")
+BASE_URL = os.getenv("BASE_URL")
 
 VK_CLIENT_ID = os.getenv("VK_CLIENT_ID")
 VK_CLIENT_SECRET = os.getenv("VK_CLIENT_SECRET")

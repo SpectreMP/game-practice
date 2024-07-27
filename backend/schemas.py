@@ -1,13 +1,21 @@
+"""
+Pydantic models for data validation.
+"""
+
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
+from datetime import datetime
 
 class UserBase(BaseModel):
     username: str
     email: EmailStr
     role: str = "user"
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
     password: str
+    role: str = "user"
 
 class UserOut(UserBase):
     id: int
@@ -15,24 +23,35 @@ class UserOut(UserBase):
     vk_id: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
+    token_type: str = "bearer"
 
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-class FolderInfo(BaseModel):
+class FolderCreate(BaseModel):
     name: str
-    path: str
+    parent: Optional[int] = None
 
-class FileInfo(BaseModel):
+class FolderSchema(BaseModel):
+    id: int
     name: str
-    path: str
+    parent: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class FileSchema(BaseModel):
+    id: int
+    name: str
+    url: str
     size: int
+    folder: Optional[int] = None
+    thumbnail: str
 
-class FolderContents(BaseModel):
-    folders: List[FolderInfo]
-    files: List[FileInfo]
+    class Config:
+        from_attributes = True

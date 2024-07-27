@@ -2,3 +2,5 @@
 .env.production
 venv
 __pycache__
+folders
+thumbnails
