@@ -7,6 +7,7 @@ import SignIn from './components/SignIn';
 import AdminPanel from './components/AdminPanel';
 import UserProfile from './components/UserProfile';
 import FileManagerWrapper from './components/FileManagerWrapper';
+import ConstructorPanel from './components/constructor/ConstructorPanel'; 
 
 const rootElement = document.getElementById('root');
 const root = ReactDOM.createRoot(rootElement);
@@ -19,6 +20,7 @@ root.render(
             <Route path="/sign-in" element={<SignIn />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/constructor" element={<ConstructorPanel />} /> 
         </Routes>
     </Router>
 );
