@@ -10,7 +10,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import User, RefreshToken
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -29,6 +29,23 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     return create_token(data, expires_delta, is_refresh=True)
+
+def save_refresh_token(db: Session, user_id: int, token: str):
+    delete_refresh_token(db, user_id) # delete any existing refresh tokens for this user
+    
+    db_token = RefreshToken(
+        user_id=user_id, 
+        token=token, 
+        expires_at = datetime.utcnow() + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    )
+    db.add(db_token)
+    db.commit()
+    db.refresh(db_token)
+    return db_token
+
+def delete_refresh_token(db: Session, user_id: int):
+    db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete()
+    db.commit()
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(

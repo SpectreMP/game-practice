@@ -10,7 +10,7 @@ from database import get_db, create_tables
 from models import User
 from schemas import FileSchema, FolderSchema, FolderCreate, Token, UserCreate, UserOut
 import file_operations
-from auth import get_current_active_user, create_access_token, create_refresh_token, RoleChecker
+from auth import get_current_active_user, create_access_token, create_refresh_token, save_refresh_token, RoleChecker
 import user_operations
 from vk_auth import vk_callback, vk_login
 from fastapi.security import OAuth2PasswordRequestForm
@@ -50,7 +50,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(data={"sub": user.username, "role": user.role})
     refresh_token = create_refresh_token(data={"sub": user.username, "role": user.role})
     
-    user_operations.create_refresh_token(db, user.id, refresh_token)
+    save_refresh_token(db, user.id, refresh_token)
     
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
@@ -59,8 +59,7 @@ async def refresh_access_token(current_user: User = Depends(get_current_active_u
     access_token = create_access_token(data={"sub": current_user.username, "role": current_user.role})
     refresh_token = create_refresh_token(data={"sub": current_user.username, "role": current_user.role})
 
-    user_operations.delete_refresh_token(db, current_user.id)
-    user_operations.create_refresh_token(db, current_user.id, refresh_token)
+    save_refresh_token(db, current_user.id, refresh_token)
     
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
