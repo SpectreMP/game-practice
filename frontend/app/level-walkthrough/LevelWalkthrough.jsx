@@ -18,6 +18,7 @@ import NotificationPanel from '../node-editor/components/NotificationPanel';
 import Console from '../node-editor/components/Console';
 import { NODE_CATEGORIES } from '../services/nodeRegistry';
 import SignalVisualizer from '../utils/SignalVisualizer';
+import { ModelViewer } from '../model-viewer/ModelViewer';
 
 // Импортируем функцию сброса состояния игрока
 import { resetPlayerState } from '../utils/signalVisualizerConnector';
@@ -419,15 +420,15 @@ const LevelWalkthrough = () => {
                             </div>
 
                             {/* Правая часть - 3D превью и консоль */}
-                            <div className="w-96 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+                            <div className="w-164 border-l border-gray-200 dark:border-gray-700 flex flex-col">
                                 {/* Используем скроллируемый контейнер для содержимого правой панели */}
                                 <div className="flex-1 p-4 overflow-y-auto">
                                     {/* Заголовок боковой панели */}
                                     <h3 className="font-bold text-gray-800 dark:text-gray-200 mb-4">3D Превью</h3>
 
                                     {/* Уменьшаем высоту визуализатора, чтобы он не занимал все пространство */}
-                                    <div className="w-full rounded bg-gray-800 flex items-center justify-center mb-4" style={{ height: '280px' }}>
-                                        <SignalVisualizer ref={signalVisualizerRef} />
+                                    <div className="w-full h-96 rounded bg-gray-800 flex items-center justify-center mb-4">
+                                        <ModelViewer />
                                     </div>
 
                                     {/* Консоль */}
@@ -447,53 +448,6 @@ const LevelWalkthrough = () => {
                                         </div>
                                     )}
 
-                                    {/* Отладочные кнопки */}
-                                    <div className="mt-2 mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                                        <div className="flex items-center mb-2">
-                                            <InformationCircleIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-500 mr-2" />
-                                            <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Отладочные функции</h4>
-                                        </div>
-                                        
-                                        {/* Быстрое сохранение */}
-                                        <button 
-                                            className="w-full mb-2 p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-                                            onClick={handleQuickSave}
-                                        >
-                                            Быстрое сохранение
-                                        </button>
-                                        
-                                        {/* Выбор и загрузка сохранения */}
-                                        <div className="flex mb-2">
-                                            <select
-                                                className="flex-grow p-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l"
-                                                value={selectedQuickSave}
-                                                onChange={(e) => setSelectedQuickSave(e.target.value)}
-                                            >
-                                                <option value="">Выберите сохранение...</option>
-                                                {quickSaves.map(save => (
-                                                    <option key={save} value={save}>{save}</option>
-                                                ))}
-                                            </select>
-                                            <button 
-                                                className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-r text-sm"
-                                                onClick={handleQuickLoad}
-                                                disabled={!selectedQuickSave}
-                                            >
-                                                Загрузить
-                                            </button>
-                                        </div>
-                                        
-                                        {/* Кнопка сброса визуализатора */}
-                                        <button 
-                                            className="w-full p-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm"
-                                            onClick={() => {
-                                                resetVisualizerState();
-                                                showNotification("Позиция игрока сброшена в исходное состояние", "info");
-                                            }}
-                                        >
-                                            Сбросить позицию игрока
-                                        </button>
-                                    </div>
                                 </div>
 
                                 {/* Фиксированная нижняя часть без прокрутки */}

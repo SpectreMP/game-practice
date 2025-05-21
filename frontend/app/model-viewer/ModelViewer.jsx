@@ -668,7 +668,7 @@ export function ModelViewer() {
   };
 
   return (
-    <div className="flex flex-col items-center h-screen">
+    <div className="flex flex-col items-center h-full">
       <div 
         className={`relative w-full h-full ${dragActive ? 'border-4 border-blue-500 bg-blue-50': null}`}
         onDragEnter={handleDrag}
